@@ -85,6 +85,7 @@ public:
     virtual string GetTruong() const { return "-"; }
     virtual string GetNghe() const { return "-"; }
     virtual string GetThuNhap() const { return "-"; }
+    virtual string GetCompanyName() const { return "-"; }
     virtual ~People() {}
 };
 /*Các class khác ở đây*/
@@ -139,14 +140,16 @@ class NguoiLaoDong : public People
 private:
     string job;
     float salary;
+    string CompanyName;
 
 public:
-    NguoiLaoDong(string _name, Date _dob, int _id, string _job, float _salary)
-        : People(_name, _dob, _id), job(_job), salary(_salary) {}
+    NguoiLaoDong(string _name, Date _dob, int _id, string _job, string _company, float _salary)
+        : People(_name, _dob, _id), job(_job), CompanyName(_company), salary(_salary) {}
     string GetType() const override { return "Nguoi Lao Dong"; }
     float CalculateMoney() const override { return salary * 0.05f; } // Đóng 5% lương
     string Output() const override { return People::Output() + " | Nghe: " + job; }
     string GetNghe() const override { return job; }
+    string GetCompanyName() const override { return CompanyName; }
     string GetThuNhap() const override { return to_string((long long)salary) + " VND"; }
 };
 class PeopleManager
@@ -176,13 +179,11 @@ public:
         int activeTab = 0;
         Vector2 scroll = {0, 0};
         Rectangle view = {0};
-
-        // MỚI: Đã xoá biến ageInput vì không cần gõ tay nữa
         char idInput[32] = "", nameInput[128] = "";
         char dayInput[16] = "", monthInput[16] = "", yearInput[16] = "";
         int residentType = 0;
-        char schoolInput[128] = "", jobInput[128] = "", moneyInput[32] = "";
-        bool editMode[10] = {false};
+        char schoolInput[128] = "", jobInput[128] = "", companyInput[128] = "", moneyInput[32] = "";
+        bool editMode[11] = {false};
 
         PeopleManager manager;
 
@@ -212,40 +213,35 @@ public:
             // --- MAIN CONTENT ---
             Rectangle cardRect = {280, 40, (float)currentWidth - 310, (float)currentHeight - 80};
             DrawRectangleRounded(cardRect, 0.02f, 10, WHITE);
-
             if (activeTab == 0)
             {
                 DrawText("Danh Sach Cu Dan Hien Tai", 310, 60, 24, textDark);
-
                 DrawText("ID", 310, 120, 16, GRAY);
-                DrawText("HO TEN", 370, 120, 16, GRAY);
-                DrawText("TUOI", 540, 120, 16, GRAY);
-                DrawText("NGAY SINH", 610, 120, 16, GRAY);
-                DrawText("PHAN LOAI", 730, 120, 16, GRAY);
-                DrawText("TRUONG HOC", 850, 120, 16, GRAY);
-                DrawText("NGHE NGHIEP", 990, 120, 16, GRAY);
-                DrawText("THU NHAP", 1140, 120, 16, GRAY);
-                DrawText("DONG GOP", 1260, 120, 16, GRAY);
-
+                DrawText("HO TEN", 350, 120, 16, GRAY);
+                DrawText("TUOI", 480, 120, 16, GRAY);
+                DrawText("NGAY SINH", 540, 120, 16, GRAY);
+                DrawText("PHAN LOAI", 650, 120, 16, GRAY);
+                DrawText("TRUONG", 810, 120, 16, GRAY);
+                DrawText("NGHE", 910, 120, 16, GRAY);
+                DrawText("CONG TY", 1010, 120, 16, GRAY);
+                DrawText("THU NHAP", 1110, 120, 16, GRAY);
+                DrawText("DONG GOP", 1250, 120, 16, GRAY);
                 for (int i = 0; i < manager.list.size(); i++)
                 {
                     People *p = manager.list[i];
                     float rowY = 150 + (i * 50);
-
                     DrawRectangleRounded({295, rowY, (float)currentWidth - 305, 40}, 0.1f, 10, {248, 250, 252, 255});
-
                     DrawText(TextFormat("%d", p->getID()), 310, rowY + 10, 18, textDark);
-                    DrawText(p->getName().c_str(), 370, rowY + 10, 18, textDark);
-                    DrawText(TextFormat("%d", p->getAge()), 540, rowY + 10, 18, textDark);
-
+                    DrawText(p->getName().c_str(), 350, rowY + 10, 18, textDark);
+                    DrawText(TextFormat("%d", p->getAge()), 480, rowY + 10, 18, textDark);
                     Date dob = p->getDateOfBirth();
-                    DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), 610, rowY + 10, 18, textDark);
-
-                    DrawText(p->GetType().c_str(), 730, rowY + 10, 18, BLUE);
-                    DrawText(p->GetTruong().c_str(), 850, rowY + 10, 18, textDark);
-                    DrawText(p->GetNghe().c_str(), 990, rowY + 10, 18, textDark);
-                    DrawText(p->GetThuNhap().c_str(), 1140, rowY + 10, 18, textDark);
-                    DrawText(TextFormat("%.0f VND", p->CalculateMoney()), 1260, rowY + 10, 18, GREEN);
+                    DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), 540, rowY + 10, 18, textDark);
+                    DrawText(p->GetType().c_str(), 650, rowY + 10, 18, BLUE);
+                    DrawText(p->GetTruong().c_str(), 810, rowY + 10, 18, textDark);
+                    DrawText(p->GetNghe().c_str(), 910, rowY + 10, 18, textDark);
+                    DrawText(p->GetCompanyName().c_str(), 1010, rowY + 10, 18, textDark);
+                    DrawText(p->GetThuNhap().c_str(), 1110, rowY + 10, 18, textDark);
+                    DrawText(TextFormat("%.0f VND", p->CalculateMoney()), 1250, rowY + 10, 18, GREEN);
                 }
             }
             else if (activeTab == 1)
@@ -301,6 +297,11 @@ public:
                     if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, jobInput, 128, editMode[7]))
                         editMode[7] = !editMode[7];
                     startY += 80;
+                    DrawText("Ten cong ty:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, companyInput, 128, editMode[10]))
+                        editMode[10] = !editMode[10];
+
+                    startY += 80;
                     DrawText("Muc luong (VND):", startX, startY, 18, textDark);
                     if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[8]))
                         editMode[8] = !editMode[8];
@@ -325,7 +326,7 @@ public:
                     if (residentType == 0)
                         newPerson = new HSSV(name, dob, id, schoolInput);
                     else if (residentType == 1)
-                        newPerson = new NguoiLaoDong(name, dob, id, jobInput, atof(moneyInput));
+                        newPerson = new NguoiLaoDong(name, dob, id, jobInput, companyInput, atof(moneyInput));
                     else if (residentType == 2)
                         newPerson = new NguoiNghiHuu(name, dob, id, atof(moneyInput));
 
@@ -334,7 +335,7 @@ public:
 
                     idInput[0] = nameInput[0] = '\0';
                     dayInput[0] = monthInput[0] = yearInput[0] = '\0';
-                    schoolInput[0] = jobInput[0] = moneyInput[0] = '\0';
+                    schoolInput[0] = jobInput[0] = companyInput[0] = moneyInput[0] = '\0';
 
                     scroll.y = 0;
                     activeTab = 0;
