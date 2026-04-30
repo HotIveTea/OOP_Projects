@@ -1,0 +1,8 @@
+HouseholdID,DiaChi,Loai,VaiTro,CCCD,HoTen,GioiTinh,Ngay,Thang,Nam,Truong_CongTy,NgheNghiep,TroCap_Luong_LuongHuu
+HD01,123 Le Loi Quan 1,LaoDong,ChuHo,102,Tran Thi B,Nu,20,10,1985,Cong Ty FPT,Ky Su Phan Mem,15000000.000000
+HD01,123 Le Loi Quan 1,HSSV,ThanhVien,101,Nguyen Van A,Nam,15,8,2005,Dai Hoc Bach Khoa,-,2000000.000000
+
+HD02,456 Nguyen Hue Quan 1,NghiHuu,ChuHo,103,Le Van C,Nam,5,2,1950,-,-,5000000.000000
+HD02,456 Nguyen Hue Quan 1,LaoDong,ThanhVien,104,Le Van D,Nam,12,5,1990,Vingroup,Truong Phong,30000000.000000
+
+HD03,78 Cach Mang Thang 8 Quan 10,HSSV,ThanhVien,107,Nguyen Hoang G,Nam,25,11,2004,Dai Hoc CNTT,-,2500000.000000
