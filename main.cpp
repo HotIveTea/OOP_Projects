@@ -22,19 +22,21 @@ class People : public ContributedMoney
 {
 protected:
     string Name;
+    string Gender;
     Date DayOfBirth;
     int Age;
     int ID;
+    bool isHouseholdHead;
 
 public:
-    People(string _name, Date _dob, int _id) : Name(_name), DayOfBirth(_dob), ID(_id)
+    People(string _name, string _gender, Date _dob, int _id, bool _isHead)
+        : Name(_name), Gender(_gender), DayOfBirth(_dob), ID(_id), isHouseholdHead(_isHead)
     {
         time_t t = time(0);
         tm *now = localtime(&t);
         int currentYear = now->tm_year + 1900;
         int currentMonth = now->tm_mon + 1;
         int currentDay = now->tm_mday;
-
         Age = currentYear - DayOfBirth.year;
         if (currentMonth < DayOfBirth.month || (currentMonth == DayOfBirth.month && currentDay < DayOfBirth.day))
         {
@@ -63,79 +65,41 @@ public:
     {
         ID = id;
     }
-    /*Các hàm như là input, nhưng mà mọi ngời để ý là mình in terminal nhé,
-    mọi ngời chỉ cần ghi thuật toán, cách nhập ra, còn phần in ra thì mình sẽ áp dụng lên app
-    Các class cũng tương tự */
-    virtual void Input(string _name, int _id, int _age, int _d, int _m, int _y)
-    {
-        Name = _name;
-        ID = _id;
-        Age = _age;
-        DayOfBirth.day = _d;
-        DayOfBirth.month = _m;
-        DayOfBirth.year = _y;
-    }
-    virtual string Output() const
-    {
-        return to_string(ID) + "," + Name + "," + to_string(Age) + "," +
-               to_string(DayOfBirth.day) + "/" + to_string(DayOfBirth.month) + "/" + to_string(DayOfBirth.year);
-    }
+    bool getIsHouseholdHead() const { return isHouseholdHead; }
     virtual string GetType() const = 0;
+    string getGender() const { return Gender; }
     virtual float CalculateMoney() const override = 0;
-    virtual string GetTruong() const { return "-"; }
-    virtual string GetNghe() const { return "-"; }
-    virtual string GetThuNhap() const { return "-"; }
+    virtual string GetSchool() const { return "-"; }
+    virtual string GetJob() const { return "-"; }
+    virtual string GetSalary() const { return "-"; }
     virtual string GetCompanyName() const { return "-"; }
     virtual ~People() {}
 };
-/*Các class khác ở đây*/
-class NguoiNghiHuu : public People
+class Retriee : public People
 {
 private:
-    float pension; // Thuộc tính: Lương hưu
-public:
-    NguoiNghiHuu(string _name, Date _dob, int _id, float _pension)
-        : People(_name, _dob, _id), pension(_pension) {}
+    float pension;
 
-    // 1. Phương thức Nhập
-    void Input(string _name, int _id, int _age, int _d, int _m, int _y, float _pen)
-    {
-        People::Input(_name, _id, _age, _d, _m, _y);
-        pension = _pen;
-    }
-    // 3. Phương thức Tính tiền đóng góp (Đa hình)
-    float CalculateMoney() const override
-    {
-        return pension * 0.02f; // Thuật toán: Người nghỉ hưu đóng góp 2% lương hưu
-    }
-    // 2. Phương thức Xuất
-    string Output() const override
-    {
-        return People::Output() + ", Luong huu: " + to_string(pension) + " VND, Dong gop: " + to_string(CalculateMoney()) + " VND";
-    }
-    // 4. Phương thức GetType (Dùng để phân loại khi đọc/ghi file CSV)
-    string GetType() const override
-    {
-        return "NghiHuu";
-    }
-    string GetThuNhap() const override { return to_string((long long)pension) + " VNĐ"; } // Hưu trí có lương hưu
+public:
+    Retriee(string _name, string _gender, Date _dob, int _id, bool _isHead, float _pension)
+        : People(_name, _gender, _dob, _id, _isHead), pension(_pension) {}
+    string GetType() const override { return "Nghi Huu"; }
+    float CalculateMoney() const override { return pension * 0.02f; }
+    string GetSalary() const override { return to_string((long long)pension) + " VND"; }
 };
-class HSSV : public People
+class Student : public People
 {
 private:
     string school;
 
 public:
-    HSSV(string _name, Date _dob, int _id, string _school)
-        : People(_name, _dob, _id), school(_school) {}
+    Student(string _name, string _gender, Date _dob, int _id, bool _isHead, string _school)
+        : People(_name, _gender, _dob, _id, _isHead), school(_school) {}
     string GetType() const override { return "HSSV"; }
-    float CalculateMoney() const override { return 0; } // HSSV miễn đóng góp
-    string Output() const override { return People::Output() + " | Truong: " + school; }
-    string GetTruong() const override { return school; }
+    float CalculateMoney() const override { return 0; }
+    string GetSchool() const override { return school; }
 };
-
-// --- LỚP CON 2: NGƯỜI LAO ĐỘNG ---
-class NguoiLaoDong : public People
+class Worker : public People
 {
 private:
     string job;
@@ -143,28 +107,59 @@ private:
     string CompanyName;
 
 public:
-    NguoiLaoDong(string _name, Date _dob, int _id, string _job, string _company, float _salary)
-        : People(_name, _dob, _id), job(_job), CompanyName(_company), salary(_salary) {}
+    Worker(string _name, string _gender, Date _dob, int _id, bool _isHead, string _job, string _company, float _salary)
+        : People(_name, _gender, _dob, _id, _isHead), job(_job), CompanyName(_company), salary(_salary) {}
     string GetType() const override { return "Nguoi Lao Dong"; }
-    float CalculateMoney() const override { return salary * 0.05f; } // Đóng 5% lương
-    string Output() const override { return People::Output() + " | Nghe: " + job; }
-    string GetNghe() const override { return job; }
+    float CalculateMoney() const override { return salary * 0.05f; }
+    string GetJob() const override { return job; }
     string GetCompanyName() const override { return CompanyName; }
-    string GetThuNhap() const override { return to_string((long long)salary) + " VND"; }
+    string GetSalary() const override { return to_string((long long)salary) + " VND"; }
 };
-class PeopleManager
+class Household
 {
 public:
-    vector<People *> list;
-    ~PeopleManager()
+    string HouseholdID;
+    string Address;
+    vector<People *> members;
+    Household(string _id, string _address) : HouseholdID(_id), Address(_address) {}
+    void AddMember(People *p) { members.push_back(p); }
+    double CalculateTotal() const
     {
-        for (People *p : list)
+        double total = 0;
+        for (People *p : members)
+            total += p->CalculateMoney();
+        return total;
+    }
+    ~Household()
+    {
+        for (People *p : members)
             delete p;
+        members.clear();
+    }
+};
+class HouseholdManager
+{
+public:
+    vector<Household *> householdList;
+
+    Household *FindHousehold(string id)
+    {
+        for (Household *h : householdList)
+        {
+            if (h->HouseholdID == id)
+                return h;
+        }
+        return nullptr;
+    }
+    ~HouseholdManager()
+    {
+        for (Household *h : householdList)
+            delete h;
     }
     void GUI()
     {
         SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
-        InitWindow(1280, 720, "Quan Ly Dan Cu Pro - C++ OOP");
+        InitWindow(1440, 800, "Quan Ly Dan Cu Pro - Theo Ho Gia Dinh");
         SetTargetFPS(60);
 
         Color sidebarColor = {30, 41, 59, 255};
@@ -177,15 +172,27 @@ public:
         GuiSetStyle(BUTTON, TEXT_COLOR_NORMAL, ColorToInt(WHITE));
 
         int activeTab = 0;
-        Vector2 scroll = {0, 0};
-        Rectangle view = {0};
+
+        // Hai bộ biến cho thanh cuộn: 1 cho Tab Danh sách, 1 cho Tab Nhập liệu
+        Vector2 scrollList = {0, 0};
+        Vector2 scrollInput = {0, 0};
+        Rectangle viewList = {0};
+        Rectangle viewInput = {0};
+
+        // Các biến đầu vào GUI
+        char hhIdInput[32] = "", addressInput[128] = "";
+        int isHeadSelect = 0; // 0: Không, 1: Có
+
         char idInput[32] = "", nameInput[128] = "";
         char dayInput[16] = "", monthInput[16] = "", yearInput[16] = "";
         int residentType = 0;
+        int genderSelect = 0; // 0: Nam, 1: Nữ
         char schoolInput[128] = "", jobInput[128] = "", companyInput[128] = "", moneyInput[32] = "";
-        bool editMode[11] = {false};
 
-        PeopleManager manager;
+        bool editMode[15] = {false};
+        int inputState = 0;
+        Household *currentHousehold = nullptr;
+        HouseholdManager manager;
 
         while (!WindowShouldClose())
         {
@@ -213,132 +220,221 @@ public:
             // --- MAIN CONTENT ---
             Rectangle cardRect = {280, 40, (float)currentWidth - 310, (float)currentHeight - 80};
             DrawRectangleRounded(cardRect, 0.02f, 10, WHITE);
+
             if (activeTab == 0)
             {
-                DrawText("Danh Sach Cu Dan Hien Tai", 310, 60, 24, textDark);
-                DrawText("ID", 310, 120, 16, GRAY);
-                DrawText("HO TEN", 350, 120, 16, GRAY);
-                DrawText("TUOI", 480, 120, 16, GRAY);
-                DrawText("NGAY SINH", 540, 120, 16, GRAY);
-                DrawText("PHAN LOAI", 650, 120, 16, GRAY);
-                DrawText("TRUONG", 810, 120, 16, GRAY);
-                DrawText("NGHE", 910, 120, 16, GRAY);
-                DrawText("CONG TY", 1010, 120, 16, GRAY);
-                DrawText("THU NHAP", 1110, 120, 16, GRAY);
-                DrawText("DONG GOP", 1250, 120, 16, GRAY);
-                for (int i = 0; i < manager.list.size(); i++)
+                DrawText("Danh Sach Cu Dan Theo Ho Gia Dinh", 310, 60, 24, textDark);
+
+                // --- ĐÃ DÃN CÁC CỘT RA XA NHAU HƠN ĐỂ KHÔNG BỊ ÉP ---
+                DrawText("ID", 310, 110, 16, GRAY);
+                DrawText("HO TEN", 350, 110, 16, GRAY);
+                DrawText("GIOI TINH", 590, 110, 16, GRAY); // +50px khoảng cách cho chữ (CHU HO)
+                DrawText("TUOI", 680, 110, 16, GRAY);
+                DrawText("NGAY SINH", 730, 110, 16, GRAY);
+                DrawText("PHAN LOAI", 840, 110, 16, GRAY);
+                DrawText("TRUONG", 950, 110, 16, GRAY);
+                DrawText("NGHE", 1030, 110, 16, GRAY);
+                DrawText("CONG TY", 1100, 110, 16, GRAY);
+                DrawText("THU NHAP", 1190, 110, 16, GRAY);
+                DrawText("DONG GOP", 1330, 110, 16, GRAY);
+
+                Rectangle panelBounds = {295, 135, (float)currentWidth - 305, (float)currentHeight - 190};
+                float totalContentHeight = 0;
+                for (Household *h : manager.householdList)
                 {
-                    People *p = manager.list[i];
-                    float rowY = 150 + (i * 50);
-                    DrawRectangleRounded({295, rowY, (float)currentWidth - 305, 40}, 0.1f, 10, {248, 250, 252, 255});
-                    DrawText(TextFormat("%d", p->getID()), 310, rowY + 10, 18, textDark);
-                    DrawText(p->getName().c_str(), 350, rowY + 10, 18, textDark);
-                    DrawText(TextFormat("%d", p->getAge()), 480, rowY + 10, 18, textDark);
-                    Date dob = p->getDateOfBirth();
-                    DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), 540, rowY + 10, 18, textDark);
-                    DrawText(p->GetType().c_str(), 650, rowY + 10, 18, BLUE);
-                    DrawText(p->GetTruong().c_str(), 810, rowY + 10, 18, textDark);
-                    DrawText(p->GetNghe().c_str(), 910, rowY + 10, 18, textDark);
-                    DrawText(p->GetCompanyName().c_str(), 1010, rowY + 10, 18, textDark);
-                    DrawText(p->GetThuNhap().c_str(), 1110, rowY + 10, 18, textDark);
-                    DrawText(TextFormat("%.0f VND", p->CalculateMoney()), 1250, rowY + 10, 18, GREEN);
+                    totalContentHeight += 50 + (h->members.size() * 45) + 20;
                 }
+                Rectangle contentBounds = {0, 0, (float)currentWidth - 325, (totalContentHeight > panelBounds.height) ? totalContentHeight : panelBounds.height};
+
+                GuiScrollPanel(panelBounds, NULL, contentBounds, &scrollList, &viewList);
+                BeginScissorMode(viewList.x, viewList.y, viewList.width, viewList.height);
+
+                float rowY = panelBounds.y + scrollList.y;
+
+                for (Household *h : manager.householdList)
+                {
+                    DrawRectangleRounded({300, rowY, (float)currentWidth - 340, 40}, 0.1f, 10, {226, 232, 240, 255});
+                    DrawText(TextFormat("[ MA HO: %s ]  -  Dia chi: %s", h->HouseholdID.c_str(), h->Address.c_str()), 310, rowY + 10, 18, textDark);
+                    DrawText(TextFormat("TONG HO DONG GOP: %.0f VND", h->CalculateTotal()), 1050, rowY + 10, 18, RED);
+                    rowY += 45;
+
+                    for (People *p : h->members)
+                    {
+                        DrawText(TextFormat("%d", p->getID()), 310, rowY + 10, 18, textDark);
+
+                        string displayTitle = p->getName();
+                        if (p->getIsHouseholdHead())
+                            displayTitle += " (CHU HO)";
+                        DrawText(displayTitle.c_str(), 350, rowY + 10, 18, (p->getIsHouseholdHead() ? BLUE : textDark));
+                        DrawText(p->getGender().c_str(), 590, rowY + 10, 18, textDark);
+                        DrawText(TextFormat("%d", p->getAge()), 680, rowY + 10, 18, textDark);
+                        Date dob = p->getDateOfBirth();
+                        DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), 730, rowY + 10, 18, textDark);
+                        DrawText(p->GetType().c_str(), 840, rowY + 10, 18, DARKGRAY);
+                        DrawText(p->GetSchool().c_str(), 950, rowY + 10, 18, textDark);
+                        DrawText(p->GetJob().c_str(), 1030, rowY + 10, 18, textDark);
+                        DrawText(p->GetCompanyName().c_str(), 1100, rowY + 10, 18, textDark);
+                        DrawText(p->GetSalary().c_str(), 1190, rowY + 10, 18, textDark);
+                        DrawText(TextFormat("%.0f VND", p->CalculateMoney()), 1330, rowY + 10, 18, GREEN);
+
+                        rowY += 40;
+                    }
+                    rowY += 20;
+                }
+                EndScissorMode();
             }
             else if (activeTab == 1)
             {
                 DrawText("Them Moi Cu Dan", 310, 60, 24, textDark);
 
                 Rectangle panelBounds = {310, 100, 700, (float)currentHeight - 150};
-                Rectangle contentBounds = {0, 0, 680, 720};
+                Rectangle contentBounds = {0, 0, 680, 1000};
 
-                GuiScrollPanel(panelBounds, NULL, contentBounds, &scroll, &view);
-                BeginScissorMode(view.x, view.y, view.width, view.height);
+                GuiScrollPanel(panelBounds, NULL, contentBounds, &scrollInput, &viewInput);
+                BeginScissorMode(viewInput.x, viewInput.y, viewInput.width, viewInput.height);
 
                 float startX = panelBounds.x + 15;
-                float startY = panelBounds.y + 10 + scroll.y;
-
-                DrawText("Chon loai cu dan:", startX, startY, 18, textDark);
-                GuiToggleGroup((Rectangle){startX, startY + 25, 150, 40}, "HSSV;Lao Dong;Nghi Huu", &residentType);
-
-                startY += 80;
-                DrawText("ID:", startX, startY, 18, textDark);
-                if (GuiTextBox((Rectangle){startX, startY + 25, 200, 40}, idInput, 32, editMode[0]))
-                    editMode[0] = !editMode[0];
-
-                startY += 80;
-                DrawText("Ho va ten:", startX, startY, 18, textDark);
-                if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, nameInput, 128, editMode[1]))
-                    editMode[1] = !editMode[1];
-
-                // MỚI: Ô nhập tuổi đã được xoá bỏ hoàn toàn ở đây
-
-                startY += 80;
-                DrawText("Ngay/Thang/Nam sinh:", startX, startY, 18, textDark);
-                if (GuiTextBox((Rectangle){startX, startY + 25, 60, 40}, dayInput, 16, editMode[3]))
-                    editMode[3] = !editMode[3];
-                if (GuiTextBox((Rectangle){startX + 70, startY + 25, 60, 40}, monthInput, 16, editMode[4]))
-                    editMode[4] = !editMode[4];
-                if (GuiTextBox((Rectangle){startX + 140, startY + 25, 80, 40}, yearInput, 16, editMode[5]))
-                    editMode[5] = !editMode[5];
-
-                startY += 80;
-                DrawLine(startX, startY, startX + 500, startY, GRAY);
-                startY += 20;
-
-                if (residentType == 0)
+                float startY = panelBounds.y + 10 + scrollInput.y;
+                if (inputState == 0)
                 {
-                    DrawText("Ten truong hoc:", startX, startY, 18, textDark);
-                    if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, schoolInput, 128, editMode[6]))
-                        editMode[6] = !editMode[6];
+                    DrawText("BUOC 1: XAC NHAN HO GIA DINH", startX, startY, 20, BLUE);
+
+                    startY += 50;
+                    DrawText("Nhap Ma Ho:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 200, 40}, hhIdInput, 32, editMode[11]))
+                        editMode[11] = !editMode[11];
+
+                    DrawText("Dia chi (Bo trong neu Ho da ton tai):", startX + 220, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX + 220, startY + 25, 450, 40}, addressInput, 128, editMode[12]))
+                        editMode[12] = !editMode[12];
+
+                    startY += 90;
+                    if (GuiButton((Rectangle){startX, startY, 250, 45}, "TIEP TUC / TAO MOI HO"))
+                    {
+                        string hhID = hhIdInput;
+                        if (hhID != "")
+                        {
+                            currentHousehold = manager.FindHousehold(hhID);
+                            if (currentHousehold == nullptr)
+                            {
+                                currentHousehold = new Household(hhID, addressInput);
+                                manager.householdList.push_back(currentHousehold);
+                            }
+                            inputState = 1;
+                        }
+                    }
                 }
-                else if (residentType == 1)
+                // ==========================================
+                // TRẠNG THÁI 1: THÊM THÀNH VIÊN VÀO HỘ
+                // ==========================================
+                else if (inputState == 1)
                 {
-                    DrawText("Nghe nghiep:", startX, startY, 18, textDark);
-                    if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, jobInput, 128, editMode[7]))
-                        editMode[7] = !editMode[7];
+                    // Tiêu đề cho biết đang thao tác trên Hộ nào
+                    DrawText(TextFormat("BUOC 2: THEM THANH VIEN CHO HO [ %s ]", currentHousehold->HouseholdID.c_str()), startX, startY, 20, GREEN);
+                    DrawText(TextFormat("Dia chi: %s", currentHousehold->Address.c_str()), startX, startY + 25, 16, GRAY);
+                    startY += 70;
+                    DrawText("La Chu Ho:", startX, startY, 18, textDark);
+                    GuiToggleGroup((Rectangle){startX, startY + 25, 120, 40}, "Khong;Co", &isHeadSelect);
                     startY += 80;
-                    DrawText("Ten cong ty:", startX, startY, 18, textDark);
-                    if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, companyInput, 128, editMode[10]))
-                        editMode[10] = !editMode[10];
+                    DrawText("Chon loai cu dan:", startX, startY, 18, textDark);
+                    GuiToggleGroup((Rectangle){startX, startY + 25, 240, 40}, "HSSV;Lao Dong;Nghi Huu", &residentType);
+                    startY += 80;
+                    DrawText("ID Ca nhan:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 200, 40}, idInput, 32, editMode[0]))
+                        editMode[0] = !editMode[0];
 
                     startY += 80;
-                    DrawText("Muc luong (VND):", startX, startY, 18, textDark);
-                    if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[8]))
-                        editMode[8] = !editMode[8];
-                }
-                else if (residentType == 2)
-                {
-                    DrawText("Luong huu (VND):", startX, startY, 18, textDark);
-                    if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[9]))
-                        editMode[9] = !editMode[9];
-                }
+                    DrawText("Ho va ten:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, nameInput, 128, editMode[1]))
+                        editMode[1] = !editMode[1];
 
-                startY += 100;
-                if (GuiButton((Rectangle){startX, startY, 180, 45}, "LUU THONG TIN"))
-                {
-                    int id = atoi(idInput);
-                    Date dob = {atoi(dayInput), atoi(monthInput), atoi(yearInput)};
-                    string name = nameInput;
+                    startY += 80;
+                    DrawText("Gioi tinh:", startX, startY, 18, textDark);
+                    GuiToggleGroup((Rectangle){startX, startY + 25, 100, 40}, "Nam;Nu", &genderSelect);
 
-                    People *newPerson = nullptr;
+                    startY += 80;
+                    DrawText("Ngay/Thang/Nam sinh:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 60, 40}, dayInput, 16, editMode[3]))
+                        editMode[3] = !editMode[3];
+                    if (GuiTextBox((Rectangle){startX + 70, startY + 25, 60, 40}, monthInput, 16, editMode[4]))
+                        editMode[4] = !editMode[4];
+                    if (GuiTextBox((Rectangle){startX + 140, startY + 25, 80, 40}, yearInput, 16, editMode[5]))
+                        editMode[5] = !editMode[5];
 
-                    // MỚI: Tham số truyền vào chỉ còn name, dob, id. Hệ thống tự tính age.
+                    startY += 80;
+                    DrawLine(startX, startY, startX + 500, startY, GRAY);
+                    startY += 20;
+
+                    // Các form nhập thông tin riêng biệt
                     if (residentType == 0)
-                        newPerson = new HSSV(name, dob, id, schoolInput);
+                    {
+                        DrawText("Ten truong hoc:", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, schoolInput, 128, editMode[6]))
+                            editMode[6] = !editMode[6];
+                    }
                     else if (residentType == 1)
-                        newPerson = new NguoiLaoDong(name, dob, id, jobInput, companyInput, atof(moneyInput));
+                    {
+                        DrawText("Nghe nghiep:", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, jobInput, 128, editMode[7]))
+                            editMode[7] = !editMode[7];
+                        startY += 80;
+                        DrawText("Ten cong ty:", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, companyInput, 128, editMode[10]))
+                            editMode[10] = !editMode[10];
+                        startY += 80;
+                        DrawText("Muc luong (VND):", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[8]))
+                            editMode[8] = !editMode[8];
+                    }
                     else if (residentType == 2)
-                        newPerson = new NguoiNghiHuu(name, dob, id, atof(moneyInput));
+                    {
+                        DrawText("Luong huu (VND):", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[9]))
+                            editMode[9] = !editMode[9];
+                    }
 
-                    if (newPerson != nullptr)
-                        manager.list.push_back(newPerson);
+                    startY += 100;
 
-                    idInput[0] = nameInput[0] = '\0';
-                    dayInput[0] = monthInput[0] = yearInput[0] = '\0';
-                    schoolInput[0] = jobInput[0] = companyInput[0] = moneyInput[0] = '\0';
+                    // NÚT 1: LƯU VÀ THÊM NGƯỜI TIẾP THEO
+                    if (GuiButton((Rectangle){startX, startY, 200, 45}, "LUU THANH VIEN"))
+                    {
+                        int id = atoi(idInput);
+                        Date dob = {atoi(dayInput), atoi(monthInput), atoi(yearInput)};
+                        string name = nameInput;
+                        string genderStr = (genderSelect == 0) ? "Nam" : "Nu";
+                        bool isHead = (isHeadSelect == 1);
 
-                    scroll.y = 0;
-                    activeTab = 0;
+                        People *newPerson = nullptr;
+                        if (residentType == 0)
+                            newPerson = new Student(name, genderStr, dob, id, isHead, schoolInput);
+                        else if (residentType == 1)
+                            newPerson = new Worker(name, genderStr, dob, id, isHead, jobInput, companyInput, atof(moneyInput));
+                        else if (residentType == 2)
+                            newPerson = new Retriee(name, genderStr, dob, id, isHead, atof(moneyInput));
+
+                        if (newPerson != nullptr)
+                        {
+                            currentHousehold->AddMember(newPerson); // Nhét thẳng vào hộ hiện tại
+                        }
+
+                        // Chỉ xoá form thông tin cá nhân, giữ nguyên Hộ
+                        idInput[0] = nameInput[0] = '\0';
+                        dayInput[0] = monthInput[0] = yearInput[0] = '\0';
+                        schoolInput[0] = jobInput[0] = companyInput[0] = moneyInput[0] = '\0';
+                        isHeadSelect = 0;
+                        scrollInput.y = 0;
+                    }
+
+                    // NÚT 2: HOÀN TẤT VÀ THOÁT RA
+                    if (GuiButton((Rectangle){startX + 220, startY, 200, 45}, "HOAN TAT HO NAY"))
+                    {
+                        inputState = 0;                        // Trả về trạng thái Bước 1
+                        currentHousehold = nullptr;            // Giải phóng con trỏ
+                        hhIdInput[0] = addressInput[0] = '\0'; // Xoá form nhập hộ
+
+                        scrollInput.y = 0;
+                        activeTab = 0; // Về màn hình Danh sách
+                    }
                 }
                 EndScissorMode();
             }
@@ -347,9 +443,8 @@ public:
         CloseWindow();
     }
 };
-
 int main()
 {
-    PeopleManager p;
+    HouseholdManager p;
     p.GUI();
 }
