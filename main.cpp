@@ -225,10 +225,10 @@ public:
             {
                 DrawText("Danh Sach Cu Dan Theo Ho Gia Dinh", 310, 60, 24, textDark);
 
-                // --- ĐÃ DÃN CÁC CỘT RA XA NHAU HƠN ĐỂ KHÔNG BỊ ÉP ---
+                // --- ĐÃ DÃN CỘT ID VÀ HỌ TÊN RA XA NHAU ---
                 DrawText("ID", 310, 110, 16, GRAY);
-                DrawText("HO TEN", 350, 110, 16, GRAY);
-                DrawText("GIOI TINH", 590, 110, 16, GRAY); // +50px khoảng cách cho chữ (CHU HO)
+                DrawText("HO TEN", 430, 110, 16, GRAY);    // MỚI: Tăng từ 350 lên 430
+                DrawText("GIOI TINH", 590, 110, 16, GRAY); // Giữ nguyên các toạ độ sau
                 DrawText("TUOI", 680, 110, 16, GRAY);
                 DrawText("NGAY SINH", 730, 110, 16, GRAY);
                 DrawText("PHAN LOAI", 840, 110, 16, GRAY);
@@ -265,11 +265,16 @@ public:
                         string displayTitle = p->getName();
                         if (p->getIsHouseholdHead())
                             displayTitle += " (CHU HO)";
-                        DrawText(displayTitle.c_str(), 350, rowY + 10, 18, (p->getIsHouseholdHead() ? BLUE : textDark));
+
+                        // MỚI: In tên ở toạ độ X = 430 để thẳng hàng với tiêu đề
+                        DrawText(displayTitle.c_str(), 430, rowY + 10, 18, (p->getIsHouseholdHead() ? BLUE : textDark));
+
                         DrawText(p->getGender().c_str(), 590, rowY + 10, 18, textDark);
                         DrawText(TextFormat("%d", p->getAge()), 680, rowY + 10, 18, textDark);
+
                         Date dob = p->getDateOfBirth();
                         DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), 730, rowY + 10, 18, textDark);
+
                         DrawText(p->GetType().c_str(), 840, rowY + 10, 18, DARKGRAY);
                         DrawText(p->GetSchool().c_str(), 950, rowY + 10, 18, textDark);
                         DrawText(p->GetJob().c_str(), 1030, rowY + 10, 18, textDark);
@@ -324,9 +329,6 @@ public:
                         }
                     }
                 }
-                // ==========================================
-                // TRẠNG THÁI 1: THÊM THÀNH VIÊN VÀO HỘ
-                // ==========================================
                 else if (inputState == 1)
                 {
                     // Tiêu đề cho biết đang thao tác trên Hộ nào
