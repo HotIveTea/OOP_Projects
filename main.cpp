@@ -344,7 +344,9 @@ public:
             BeginDrawing();
             ClearBackground(bgColor);
 
-            // --- SIDEBAR ---
+            // ==========================================
+            // VẼ SIDEBAR BÊN TRÁI
+            // ==========================================
             DrawRectangle(0, 0, 250, currentHeight, sidebarColor);
             DrawText("QUAN LY", 25, 40, 28, WHITE);
             DrawText("KHU PHO", 25, 75, 28, primaryColor);
@@ -359,19 +361,23 @@ public:
             if (GuiButton((Rectangle){25, 215, 200, 40}, "Them moi cu dan"))
                 activeTab = 1;
 
-            // Vẫn giữ tab công cụ để Ghi file nếu bro muốn
             if (activeTab == 2)
                 DrawRectangle(0, 270, 250, 50, {51, 65, 85, 255});
             if (GuiButton((Rectangle){25, 275, 200, 40}, "Luu & Thong ke"))
                 activeTab = 2;
 
-            // --- MAIN CONTENT ---
+            // ==========================================
+            // VẼ KHUNG NỘI DUNG CHÍNH (MAIN CONTENT)
+            // ==========================================
             Rectangle cardRect = {280, 40, (float)currentWidth - 310, (float)currentHeight - 80};
             DrawRectangleRounded(cardRect, 0.02f, 10, WHITE);
 
+            // ------------------------------------------
+            // TAB 0: DANH SÁCH (TOẠ ĐỘ ĐỘNG & SẮP XẾP)
+            // ------------------------------------------
             if (activeTab == 0)
             {
-                // --- TOP BAR: THANH CÔNG CỤ NHƯ WEB ---
+                // --- TOP BAR CÔNG CỤ ---
                 DrawText("Xoa theo CCCD:", 310, 60, 18, textDark);
                 if (GuiTextBox((Rectangle){460, 55, 150, 35}, quickDelInput, 32, editQuickDel))
                     editQuickDel = !editQuickDel;
@@ -389,15 +395,13 @@ public:
 
                 DrawLine(310, 120, currentWidth - 60, 120, LIGHTGRAY);
 
-                // ==============================================================
-                // THUẬT TOÁN TOẠ ĐỘ ĐỘNG (TỰ ĐỘNG DÃN CỘT RA MÉP MÀN HÌNH)
-                // ==============================================================
+                // --- THUẬT TOÁN TOẠ ĐỘ ĐỘNG CHIA CỘT ---
                 float startX = 310;
-                float usableWidth = (float)currentWidth - startX - 40; // Trừ lề phải 40px cho đẹp
+                float usableWidth = (float)currentWidth - startX - 40;
 
                 float colID = startX;
-                float colName = startX + usableWidth * 0.05f;   // Tên bắt đầu sau ID 5%
-                float colGender = startX + usableWidth * 0.22f; // Dành 17% siêu rộng cho Tên + (CHỦ HỘ)
+                float colName = startX + usableWidth * 0.05f;
+                float colGender = startX + usableWidth * 0.22f;
                 float colAge = startX + usableWidth * 0.30f;
                 float colDob = startX + usableWidth * 0.35f;
                 float colType = startX + usableWidth * 0.45f;
@@ -407,7 +411,7 @@ public:
                 float colIncome = startX + usableWidth * 0.85f;
                 float colContrib = startX + usableWidth * 0.94f;
 
-                // HEADER CỘT DANH SÁCH (Sử dụng biến động)
+                // IN HEADER CỘT
                 DrawText("ID", colID, 130, 16, GRAY);
                 DrawText("HO TEN", colName, 130, 16, GRAY);
                 DrawText("GIOI TINH", colGender, 130, 16, GRAY);
@@ -424,7 +428,7 @@ public:
 
                 if (sortMode == 0)
                 {
-                    // CHẾ ĐỘ 1: HIỂN THỊ THEO HỘ GIA ĐÌNH
+                    // HIỂN THỊ THEO HỘ GIA ĐÌNH
                     float totalContentHeight = 0;
                     for (Household *h : manager.householdList)
                         totalContentHeight += 50 + (h->members.size() * 45) + 20;
@@ -438,15 +442,12 @@ public:
                     {
                         DrawRectangleRounded({300, rowY, (float)currentWidth - 340, 40}, 0.1f, 10, {226, 232, 240, 255});
                         DrawText(TextFormat("[ MA HO: %s ]  -  Dia chi: %s", h->HouseholdID.c_str(), h->Address.c_str()), 310, rowY + 10, 18, textDark);
-
-                        // Chữ Tổng đóng góp cũng đẩy động ra sát mép phải luôn
                         DrawText(TextFormat("TONG HO DONG GOP: %.0f VND", h->CalculateTotal()), colIncome - 50, rowY + 10, 18, RED);
                         rowY += 45;
 
                         for (People *p : h->members)
                         {
                             DrawText(TextFormat("%d", p->getID()), colID, rowY + 10, 18, textDark);
-
                             string displayTitle = p->getName();
                             if (p->getIsHouseholdHead())
                                 displayTitle += " (CHU HO)";
@@ -454,27 +455,23 @@ public:
 
                             DrawText(p->getGender().c_str(), colGender, rowY + 10, 18, textDark);
                             DrawText(TextFormat("%d", p->getAge()), colAge, rowY + 10, 18, textDark);
-
                             Date dob = p->getDateOfBirth();
                             DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), colDob, rowY + 10, 18, textDark);
-
                             DrawText(p->GetType().c_str(), colType, rowY + 10, 18, DARKGRAY);
                             DrawText(p->GetSchool().c_str(), colSchool, rowY + 10, 18, textDark);
                             DrawText(p->GetJob().c_str(), colJob, rowY + 10, 18, textDark);
                             DrawText(p->GetCompanyName().c_str(), colCompany, rowY + 10, 18, textDark);
                             DrawText(p->GetSalary().c_str(), colIncome, rowY + 10, 18, textDark);
                             DrawText(TextFormat("%.0f VND", p->CalculateMoney()), colContrib, rowY + 10, 18, GREEN);
-
                             rowY += 40;
                         }
                         rowY += 20;
                     }
-
                     EndScissorMode();
                 }
                 else
                 {
-                    // CHẾ ĐỘ 2: PHẲNG HÓA VÀ SẮP XẾP
+                    // PHẲNG HÓA VÀ SẮP XẾP MỌI CƯ DÂN
                     vector<People *> flatList = manager.GetAllPeople();
                     int type = (sortMode == 1 || sortMode == 2) ? 0 : 1;
                     int order = (sortMode == 1 || sortMode == 3) ? 0 : 1;
@@ -490,36 +487,201 @@ public:
                     for (People *p : flatList)
                     {
                         DrawRectangleRounded({300, rowY, (float)currentWidth - 340, 35}, 0.1f, 10, {248, 250, 252, 255});
-
                         DrawText(TextFormat("%d", p->getID()), colID, rowY + 10, 18, textDark);
                         DrawText(p->getName().c_str(), colName, rowY + 10, 18, textDark);
                         DrawText(p->getGender().c_str(), colGender, rowY + 10, 18, textDark);
                         DrawText(TextFormat("%d", p->getAge()), colAge, rowY + 10, 18, textDark);
-
                         Date dob = p->getDateOfBirth();
                         DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), colDob, rowY + 10, 18, textDark);
-
                         DrawText(p->GetType().c_str(), colType, rowY + 10, 18, DARKGRAY);
                         DrawText(p->GetSchool().c_str(), colSchool, rowY + 10, 18, textDark);
                         DrawText(p->GetJob().c_str(), colJob, rowY + 10, 18, textDark);
                         DrawText(p->GetCompanyName().c_str(), colCompany, rowY + 10, 18, textDark);
                         DrawText(p->GetSalary().c_str(), colIncome, rowY + 10, 18, textDark);
                         DrawText(TextFormat("%.0f VND", p->CalculateMoney()), colContrib, rowY + 10, 18, GREEN);
-
                         rowY += 40;
                     }
                     EndScissorMode();
                 }
             }
+            // ------------------------------------------
+            // TAB 1: THÊM CƯ DÂN (2 BƯỚC)
+            // ------------------------------------------
+            else if (activeTab == 1)
+            {
+                DrawText("Them Moi Cu Dan", 310, 60, 24, textDark);
+
+                Rectangle panelBounds = {310, 100, 800, (float)currentHeight - 150};
+                Rectangle contentBounds = {0, 0, 780, 1000};
+
+                GuiScrollPanel(panelBounds, NULL, contentBounds, &scrollInput, &viewInput);
+                BeginScissorMode(viewInput.x, viewInput.y, viewInput.width, viewInput.height);
+
+                float startX = panelBounds.x + 15;
+                float startY = panelBounds.y + 10 + scrollInput.y;
+
+                if (inputState == 0)
+                {
+                    // BƯỚC 1: XÁC NHẬN HỘ GIA ĐÌNH
+                    DrawText("BUOC 1: XAC NHAN HO GIA DINH", startX, startY, 20, BLUE);
+
+                    startY += 50;
+                    DrawText("Nhap Ma Ho:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 200, 40}, hhIdInput, 32, editMode[11]))
+                        editMode[11] = !editMode[11];
+
+                    DrawText("Dia chi (Bo trong neu Ho da ton tai):", startX + 220, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX + 220, startY + 25, 450, 40}, addressInput, 128, editMode[12]))
+                        editMode[12] = !editMode[12];
+
+                    startY += 90;
+                    if (GuiButton((Rectangle){startX, startY, 250, 45}, "TIEP TUC / TAO MOI HO"))
+                    {
+                        string hhID = hhIdInput;
+                        if (hhID != "")
+                        {
+                            currentHousehold = manager.FindHousehold(hhID);
+                            if (currentHousehold == nullptr)
+                            {
+                                currentHousehold = new Household(hhID, addressInput);
+                                manager.householdList.push_back(currentHousehold);
+                            }
+                            inputState = 1;
+                        }
+                    }
+
+                    // HIỂN THỊ GỢI Ý HỘ ĐÃ CÓ
+                    startY += 100;
+                    DrawText("DANH SACH CAC HO DA TON TAI TRONG HE THONG:", startX, startY, 16, DARKGRAY);
+                    DrawLine(startX, startY + 25, startX + 600, startY + 25, LIGHTGRAY);
+                    startY += 40;
+
+                    for (Household *h : manager.householdList)
+                    {
+                        DrawText(TextFormat("> Ma Ho: %s   |   Dia chi: %s (%d thanh vien)",
+                                            h->HouseholdID.c_str(), h->Address.c_str(), h->members.size()),
+                                 startX, startY, 18, GRAY);
+                        startY += 30;
+                    }
+                }
+                else if (inputState == 1)
+                {
+                    // BƯỚC 2: THÊM THÀNH VIÊN
+                    DrawText(TextFormat("BUOC 2: THEM THANH VIEN CHO HO [ %s ]", currentHousehold->HouseholdID.c_str()), startX, startY, 20, GREEN);
+                    DrawText(TextFormat("Dia chi: %s", currentHousehold->Address.c_str()), startX, startY + 25, 16, GRAY);
+
+                    startY += 70;
+                    DrawText("La Chu Ho:", startX, startY, 18, textDark);
+                    GuiToggleGroup((Rectangle){startX, startY + 25, 120, 40}, "Khong;Co", &isHeadSelect);
+
+                    startY += 80;
+                    DrawText("Chon loai cu dan:", startX, startY, 18, textDark);
+                    GuiToggleGroup((Rectangle){startX, startY + 25, 240, 40}, "HSSV;Lao Dong;Nghi Huu", &residentType);
+
+                    startY += 80;
+                    DrawText("ID Ca nhan:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 200, 40}, idInput, 32, editMode[0]))
+                        editMode[0] = !editMode[0];
+
+                    startY += 80;
+                    DrawText("Ho va ten:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, nameInput, 128, editMode[1]))
+                        editMode[1] = !editMode[1];
+
+                    startY += 80;
+                    DrawText("Gioi tinh:", startX, startY, 18, textDark);
+                    GuiToggleGroup((Rectangle){startX, startY + 25, 100, 40}, "Nam;Nu", &genderSelect);
+
+                    startY += 80;
+                    DrawText("Ngay/Thang/Nam sinh:", startX, startY, 18, textDark);
+                    if (GuiTextBox((Rectangle){startX, startY + 25, 60, 40}, dayInput, 16, editMode[3]))
+                        editMode[3] = !editMode[3];
+                    if (GuiTextBox((Rectangle){startX + 70, startY + 25, 60, 40}, monthInput, 16, editMode[4]))
+                        editMode[4] = !editMode[4];
+                    if (GuiTextBox((Rectangle){startX + 140, startY + 25, 80, 40}, yearInput, 16, editMode[5]))
+                        editMode[5] = !editMode[5];
+
+                    startY += 80;
+                    DrawLine(startX, startY, startX + 500, startY, GRAY);
+                    startY += 20;
+
+                    if (residentType == 0)
+                    {
+                        DrawText("Ten truong hoc:", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, schoolInput, 128, editMode[6]))
+                            editMode[6] = !editMode[6];
+                    }
+                    else if (residentType == 1)
+                    {
+                        DrawText("Nghe nghiep:", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, jobInput, 128, editMode[7]))
+                            editMode[7] = !editMode[7];
+                        startY += 80;
+                        DrawText("Ten cong ty:", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 400, 40}, companyInput, 128, editMode[10]))
+                            editMode[10] = !editMode[10];
+                        startY += 80;
+                        DrawText("Muc luong (VND):", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[8]))
+                            editMode[8] = !editMode[8];
+                    }
+                    else if (residentType == 2)
+                    {
+                        DrawText("Luong huu (VND):", startX, startY, 18, textDark);
+                        if (GuiTextBox((Rectangle){startX, startY + 25, 300, 40}, moneyInput, 32, editMode[9]))
+                            editMode[9] = !editMode[9];
+                    }
+
+                    startY += 100;
+                    if (GuiButton((Rectangle){startX, startY, 200, 45}, "LUU THANH VIEN"))
+                    {
+                        int id = atoi(idInput);
+                        Date dob = {atoi(dayInput), atoi(monthInput), atoi(yearInput)};
+                        string name = nameInput;
+                        string genderStr = (genderSelect == 0) ? "Nam" : "Nu";
+                        bool isHead = (isHeadSelect == 1);
+
+                        People *newPerson = nullptr;
+                        if (residentType == 0)
+                            newPerson = new Student(name, genderStr, dob, id, isHead, schoolInput);
+                        else if (residentType == 1)
+                            newPerson = new Worker(name, genderStr, dob, id, isHead, jobInput, companyInput, atof(moneyInput));
+                        else if (residentType == 2)
+                            newPerson = new Retriee(name, genderStr, dob, id, isHead, atof(moneyInput));
+
+                        if (newPerson != nullptr)
+                            currentHousehold->AddMember(newPerson);
+
+                        idInput[0] = nameInput[0] = '\0';
+                        dayInput[0] = monthInput[0] = yearInput[0] = '\0';
+                        schoolInput[0] = jobInput[0] = companyInput[0] = moneyInput[0] = '\0';
+                        isHeadSelect = 0;
+                        scrollInput.y = 0;
+                    }
+
+                    if (GuiButton((Rectangle){startX + 220, startY, 200, 45}, "HOAN TAT HO NAY"))
+                    {
+                        inputState = 0;
+                        currentHousehold = nullptr;
+                        hhIdInput[0] = addressInput[0] = '\0';
+                        scrollInput.y = 0;
+                        activeTab = 0;
+                    }
+                }
+                EndScissorMode();
+            }
+            // ------------------------------------------
+            // TAB 2: LƯU & THỐNG KÊ
+            // ------------------------------------------
             else if (activeTab == 2)
             {
-                // TAB LƯU THỐNG KÊ (Để Ghi đè file CSV)
                 DrawText("Luu tru Du lieu he thong", 310, 60, 24, textDark);
                 if (GuiButton((Rectangle){310, 120, 250, 45}, "GHI DE VAO FILE DATA.CSV"))
                 {
                     manager.ExportCSV("data.csv");
                 }
             }
+
             EndDrawing();
         }
         CloseWindow();
