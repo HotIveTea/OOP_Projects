@@ -125,6 +125,18 @@ public:
             total += p->CalculateMoney();
         return total;
     }
+    void ReplaceMember(People *oldPerson, People *newPerson)
+    {
+        for (size_t i = 0; i < members.size(); i++)
+        {
+            if (members[i] == oldPerson)
+            {
+                delete members[i];
+                members[i] = newPerson;
+                return;
+            }
+        }
+    }
     int GetMemberCount() const { return members.size(); }
     ~Household()
     {
@@ -286,6 +298,22 @@ public:
         }
         f.close();
     }
+    bool FindPersonAndHousehold(int targetID, Household *&outHouse, People *&outPerson)
+    {
+        for (Household *h : householdList)
+        {
+            for (People *p : h->members)
+            {
+                if (p->getID() == targetID)
+                {
+                    outHouse = h;
+                    outPerson = p;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     ~HouseholdManager()
     {
         for (Household *h : householdList)
@@ -306,13 +334,19 @@ public:
         GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(primaryColor));
         GuiSetStyle(BUTTON, TEXT_COLOR_NORMAL, ColorToInt(WHITE));
 
+        // ==========================================
+        // KHAI BÁO TẤT CẢ BIẾN TRẠNG THÁI Ở ĐÂY (NGOÀI VÒNG LẶP)
+        // ==========================================
         int activeTab = 0;
+        int inputState = 0;
+        Household *currentHousehold = nullptr;
+
         Vector2 scrollList = {0, 0};
         Vector2 scrollInput = {0, 0};
         Rectangle viewList = {0};
         Rectangle viewInput = {0};
 
-        // Các biến cho form
+        // Các biến cho form Nhập liệu (Tab 1)
         char hhIdInput[32] = "", addressInput[128] = "";
         int isHeadSelect = 0;
         char idInput[32] = "", nameInput[128] = "";
@@ -322,20 +356,29 @@ public:
         char schoolInput[128] = "", jobInput[128] = "", companyInput[128] = "", moneyInput[32] = "";
         bool editMode[15] = {false};
 
-        int inputState = 0;
-        Household *currentHousehold = nullptr;
+        // Các biến cho Sắp xếp Dropdown (Tab 0)
+        int sortActive = 0;
+        bool sortDropdownEdit = false;
+        int sortOrder = 0;
 
-        // Các biến cho Web-like UI (Sắp xếp & Xóa)
-        int sortMode = 0; // 0: Theo Hộ, 1: Tuổi Tăng, 2: Tuổi Giảm, 3: Tiền Tăng, 4: Tiền Giảm
+        // Các biến cho thao tác Xóa (Tab 0)
         char quickDelInput[32] = "";
         bool editQuickDel = false;
         string notifMsg = "";
+
+        // Các biến cho tính năng Sửa (Tab 0 -> Tab 1)
+        char searchInput[32] = "";
+        bool editSearch = false;
+        People *personToEdit = nullptr;
 
         HouseholdManager manager;
 
         // TỰ ĐỘNG LOAD DỮ LIỆU KHI MỞ APP
         manager.ImportCSV("data.csv");
 
+        // ==========================================
+        // VÒNG LẶP CHÍNH CỦA GIAO DIỆN
+        // ==========================================
         while (!WindowShouldClose())
         {
             int currentWidth = GetScreenWidth();
@@ -344,9 +387,7 @@ public:
             BeginDrawing();
             ClearBackground(bgColor);
 
-            // ==========================================
-            // VẼ SIDEBAR BÊN TRÁI
-            // ==========================================
+            // --- SIDEBAR ---
             DrawRectangle(0, 0, 250, currentHeight, sidebarColor);
             DrawText("QUAN LY", 25, 40, 28, WHITE);
             DrawText("KHU PHO", 25, 75, 28, primaryColor);
@@ -358,7 +399,8 @@ public:
 
             if (activeTab == 1)
                 DrawRectangle(0, 210, 250, 50, {51, 65, 85, 255});
-            if (GuiButton((Rectangle){25, 215, 200, 40}, "Them moi cu dan"))
+            // Nếu đang ở chế độ sửa thì đổi tên nút
+            if (GuiButton((Rectangle){25, 215, 200, 40}, (personToEdit ? "Sua thong tin" : "Them moi cu dan")))
                 activeTab = 1;
 
             if (activeTab == 2)
@@ -366,39 +408,18 @@ public:
             if (GuiButton((Rectangle){25, 275, 200, 40}, "Luu & Thong ke"))
                 activeTab = 2;
 
-            // ==========================================
-            // VẼ KHUNG NỘI DUNG CHÍNH (MAIN CONTENT)
-            // ==========================================
+            // --- MAIN CONTENT KHUNG TRẮNG ---
             Rectangle cardRect = {280, 40, (float)currentWidth - 310, (float)currentHeight - 80};
             DrawRectangleRounded(cardRect, 0.02f, 10, WHITE);
 
-            // ------------------------------------------
-            // TAB 0: DANH SÁCH (TOẠ ĐỘ ĐỘNG & SẮP XẾP)
-            // ------------------------------------------
+            // ----------------------------------------------------
+            // TAB 0: DANH SÁCH & CÔNG CỤ TÌM KIẾM/SẮP XẾP
+            // ----------------------------------------------------
             if (activeTab == 0)
             {
-                // --- TOP BAR CÔNG CỤ ---
-                DrawText("Xoa theo CCCD:", 310, 60, 18, textDark);
-                if (GuiTextBox((Rectangle){460, 55, 150, 35}, quickDelInput, 32, editQuickDel))
-                    editQuickDel = !editQuickDel;
-                if (GuiButton((Rectangle){620, 55, 80, 35}, "XOA"))
-                {
-                    if (manager.DeleteMember(atoi(quickDelInput)))
-                        notifMsg = "Da xoa xoa thanh cong!";
-                    else
-                        notifMsg = "Khong tim thay CCCD!";
-                }
-                DrawText(notifMsg.c_str(), 460, 95, 16, RED);
-
-                DrawText("Sap xep theo:", 750, 60, 18, textDark);
-                GuiToggleGroup((Rectangle){880, 55, 100, 35}, "Theo Ho;Tuoi Tang;Tuoi Giam;Tien Tang;Tien Giam", &sortMode);
-
-                DrawLine(310, 120, currentWidth - 60, 120, LIGHTGRAY);
-
-                // --- THUẬT TOÁN TOẠ ĐỘ ĐỘNG CHIA CỘT ---
+                // TOẠ ĐỘ ĐỘNG
                 float startX = 310;
                 float usableWidth = (float)currentWidth - startX - 40;
-
                 float colID = startX;
                 float colName = startX + usableWidth * 0.05f;
                 float colGender = startX + usableWidth * 0.22f;
@@ -411,7 +432,6 @@ public:
                 float colIncome = startX + usableWidth * 0.85f;
                 float colContrib = startX + usableWidth * 0.94f;
 
-                // IN HEADER CỘT
                 DrawText("ID", colID, 130, 16, GRAY);
                 DrawText("HO TEN", colName, 130, 16, GRAY);
                 DrawText("GIOI TINH", colGender, 130, 16, GRAY);
@@ -426,9 +446,9 @@ public:
 
                 Rectangle panelBounds = {295, 155, (float)currentWidth - 305, (float)currentHeight - 210};
 
-                if (sortMode == 0)
+                // --- VẼ DANH SÁCH BÊN DƯỚI TRƯỚC ---
+                if (sortActive == 0)
                 {
-                    // HIỂN THỊ THEO HỘ GIA ĐÌNH
                     float totalContentHeight = 0;
                     for (Household *h : manager.householdList)
                         totalContentHeight += 50 + (h->members.size() * 45) + 20;
@@ -452,7 +472,6 @@ public:
                             if (p->getIsHouseholdHead())
                                 displayTitle += " (CHU HO)";
                             DrawText(displayTitle.c_str(), colName, rowY + 10, 18, (p->getIsHouseholdHead() ? BLUE : textDark));
-
                             DrawText(p->getGender().c_str(), colGender, rowY + 10, 18, textDark);
                             DrawText(TextFormat("%d", p->getAge()), colAge, rowY + 10, 18, textDark);
                             Date dob = p->getDateOfBirth();
@@ -471,11 +490,9 @@ public:
                 }
                 else
                 {
-                    // PHẲNG HÓA VÀ SẮP XẾP MỌI CƯ DÂN
                     vector<People *> flatList = manager.GetAllPeople();
-                    int type = (sortMode == 1 || sortMode == 2) ? 0 : 1;
-                    int order = (sortMode == 1 || sortMode == 3) ? 0 : 1;
-                    manager.SortMembers(flatList, type, order);
+                    int type = (sortActive == 1) ? 0 : 1;
+                    manager.SortMembers(flatList, type, sortOrder);
 
                     float totalContentHeight = flatList.size() * 45 + 20;
                     Rectangle contentBounds = {0, 0, (float)currentWidth - 325, (totalContentHeight > panelBounds.height) ? totalContentHeight : panelBounds.height};
@@ -503,10 +520,86 @@ public:
                     }
                     EndScissorMode();
                 }
+
+                // --- VẼ TOP BAR (Search & Sort) NẰM TRÊN CÙNG ĐỂ KHÔNG BỊ DANH SÁCH CHE LẤP ---
+                DrawRectangle(280, 40, currentWidth - 310, 80, WHITE);
+                DrawLine(310, 120, currentWidth - 60, 120, LIGHTGRAY);
+
+                DrawText("Thao tac (Nhap ID):", 310, 60, 18, textDark);
+                if (GuiTextBox((Rectangle){480, 55, 120, 35}, searchInput, 32, editSearch))
+                    editSearch = !editSearch;
+
+                // NÚT XÓA
+                if (GuiButton((Rectangle){610, 55, 70, 35}, "XOA"))
+                {
+                    if (manager.DeleteMember(atoi(searchInput)))
+                        notifMsg = "Da xoa!";
+                    else
+                        notifMsg = "Khong tim thay!";
+                }
+
+                // NÚT SỬA (CHUYỂN SANG TAB 1 VÀ ĐỔ DỮ LIỆU)
+                if (GuiButton((Rectangle){690, 55, 70, 35}, "SUA"))
+                {
+                    int targetID = atoi(searchInput);
+                    if (manager.FindPersonAndHousehold(targetID, currentHousehold, personToEdit))
+                    {
+                        activeTab = 1;
+                        inputState = 1;
+
+                        snprintf(idInput, 32, "%d", personToEdit->getID());
+                        snprintf(nameInput, 128, "%s", personToEdit->getName().c_str());
+                        snprintf(dayInput, 16, "%d", personToEdit->getDateOfBirth().day);
+                        snprintf(monthInput, 16, "%d", personToEdit->getDateOfBirth().month);
+                        snprintf(yearInput, 16, "%d", personToEdit->getDateOfBirth().year);
+
+                        isHeadSelect = personToEdit->getIsHouseholdHead() ? 1 : 0;
+                        genderSelect = (personToEdit->getGender() == "Nu") ? 1 : 0;
+
+                        string type = personToEdit->GetType();
+                        if (type == "HSSV")
+                        {
+                            residentType = 0;
+                            snprintf(schoolInput, 128, "%s", personToEdit->GetSchool().c_str());
+                        }
+                        else if (type == "Lao Dong")
+                        {
+                            residentType = 1;
+                            snprintf(jobInput, 128, "%s", personToEdit->GetJob().c_str());
+                            snprintf(companyInput, 128, "%s", personToEdit->GetCompanyName().c_str());
+                            string incomeRaw = personToEdit->GetSalary();
+                            snprintf(moneyInput, 32, "%s", incomeRaw.substr(0, incomeRaw.find(' ')).c_str());
+                        }
+                        else
+                        {
+                            residentType = 2;
+                            string incomeRaw = personToEdit->GetSalary();
+                            snprintf(moneyInput, 32, "%s", incomeRaw.substr(0, incomeRaw.find(' ')).c_str());
+                        }
+                        notifMsg = "";
+                    }
+                    else
+                    {
+                        notifMsg = "Khong tim thay!";
+                    }
+                }
+                DrawText(notifMsg.c_str(), 480, 95, 16, RED);
+
+                // NÚT DROPDOWN SẮP XẾP
+                DrawText("Sap xep:", 800, 60, 18, textDark);
+                if (sortActive != 0)
+                {
+                    GuiToggleGroup((Rectangle){900, 55, 80, 35}, "Tang;Giam", &sortOrder);
+                }
+                // DROPDOWN VẼ CUỐI CÙNG TRONG VÙNG NÀY ĐỂ MENU XỔ XUỐNG ĐƯỢC ƯU TIÊN HIỂN THỊ
+                if (GuiDropdownBox((Rectangle){1080, 55, 180, 35}, "Theo Ho;Theo Tuoi;Theo Tien", &sortActive, sortDropdownEdit))
+                {
+                    sortDropdownEdit = !sortDropdownEdit;
+                }
             }
-            // ------------------------------------------
-            // TAB 1: THÊM CƯ DÂN (2 BƯỚC)
-            // ------------------------------------------
+            // ----------------------------------------------------
+            // TAB 1: THÊM MỚI / CHỈNH SỬA CƯ DÂN
+            // ----------------------------------------------------
             else if (activeTab == 1)
             {
                 DrawText("Them Moi Cu Dan", 310, 60, 24, textDark);
@@ -522,7 +615,6 @@ public:
 
                 if (inputState == 0)
                 {
-                    // BƯỚC 1: XÁC NHẬN HỘ GIA ĐÌNH
                     DrawText("BUOC 1: XAC NHAN HO GIA DINH", startX, startY, 20, BLUE);
 
                     startY += 50;
@@ -550,7 +642,6 @@ public:
                         }
                     }
 
-                    // HIỂN THỊ GỢI Ý HỘ ĐÃ CÓ
                     startY += 100;
                     DrawText("DANH SACH CAC HO DA TON TAI TRONG HE THONG:", startX, startY, 16, DARKGRAY);
                     DrawLine(startX, startY + 25, startX + 600, startY + 25, LIGHTGRAY);
@@ -566,7 +657,6 @@ public:
                 }
                 else if (inputState == 1)
                 {
-                    // BƯỚC 2: THÊM THÀNH VIÊN
                     DrawText(TextFormat("BUOC 2: THEM THANH VIEN CHO HO [ %s ]", currentHousehold->HouseholdID.c_str()), startX, startY, 20, GREEN);
                     DrawText(TextFormat("Dia chi: %s", currentHousehold->Address.c_str()), startX, startY + 25, 16, GRAY);
 
@@ -633,7 +723,8 @@ public:
                     }
 
                     startY += 100;
-                    if (GuiButton((Rectangle){startX, startY, 200, 45}, "LUU THANH VIEN"))
+                    // LƯU Ý: Lớp phải đúng tên HSSV, NguoiLaoDong, NguoiNghiHuu như định nghĩa OOP
+                    if (GuiButton((Rectangle){325, startY, 220, 45}, (personToEdit ? "CAP NHAT THANH VIEN" : "LUU THANH VIEN")))
                     {
                         int id = atoi(idInput);
                         Date dob = {atoi(dayInput), atoi(monthInput), atoi(yearInput)};
@@ -650,19 +741,32 @@ public:
                             newPerson = new Retriee(name, genderStr, dob, id, isHead, atof(moneyInput));
 
                         if (newPerson != nullptr)
-                            currentHousehold->AddMember(newPerson);
+                        {
+                            if (personToEdit)
+                            {
+                                currentHousehold->ReplaceMember(personToEdit, newPerson);
+                                personToEdit = nullptr;
+                            }
+                            else
+                            {
+                                currentHousehold->AddMember(newPerson);
+                            }
+                        }
 
                         idInput[0] = nameInput[0] = '\0';
                         dayInput[0] = monthInput[0] = yearInput[0] = '\0';
                         schoolInput[0] = jobInput[0] = companyInput[0] = moneyInput[0] = '\0';
                         isHeadSelect = 0;
                         scrollInput.y = 0;
+                        activeTab = 0;
+                        inputState = 0;
                     }
 
-                    if (GuiButton((Rectangle){startX + 220, startY, 200, 45}, "HOAN TAT HO NAY"))
+                    if (GuiButton((Rectangle){560, startY, 200, 45}, (personToEdit ? "HUY SUA" : "HOAN TAT HO NAY")))
                     {
                         inputState = 0;
                         currentHousehold = nullptr;
+                        personToEdit = nullptr;
                         hhIdInput[0] = addressInput[0] = '\0';
                         scrollInput.y = 0;
                         activeTab = 0;
@@ -670,9 +774,9 @@ public:
                 }
                 EndScissorMode();
             }
-            // ------------------------------------------
+            // ----------------------------------------------------
             // TAB 2: LƯU & THỐNG KÊ
-            // ------------------------------------------
+            // ----------------------------------------------------
             else if (activeTab == 2)
             {
                 DrawText("Luu tru Du lieu he thong", 310, 60, 24, textDark);
@@ -691,4 +795,5 @@ int main()
 {
     HouseholdManager p;
     p.GUI();
+    return 0;
 }
