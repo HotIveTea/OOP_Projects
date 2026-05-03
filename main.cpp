@@ -251,14 +251,26 @@ public:
         }
         f.close();
     }
-    void ImportCSV(string filename)
+    void ClearData()
+    {
+        for (Household *h : householdList)
+        {
+            delete h;
+        }
+        householdList.clear();
+    }
+    void ImportCSV(string filename, bool overwrite = false)
     {
         ifstream f(filename);
         if (!f.is_open())
             return;
+        if (overwrite == true)
+        {
+            ClearData();
+        }
+
         string line, word;
         getline(f, line); // Bỏ qua dòng tiêu đề
-
         while (getline(f, line))
         {
             stringstream s(line);
@@ -316,8 +328,7 @@ public:
     }
     ~HouseholdManager()
     {
-        for (Household *h : householdList)
-            delete h;
+        ClearData();
     }
     void GUI()
     {
@@ -333,7 +344,6 @@ public:
         GuiSetStyle(DEFAULT, TEXT_SIZE, 18);
         GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(primaryColor));
         GuiSetStyle(BUTTON, TEXT_COLOR_NORMAL, ColorToInt(WHITE));
-
         // ==========================================
         // KHAI BÁO TẤT CẢ BIẾN TRẠNG THÁI Ở ĐÂY (NGOÀI VÒNG LẶP)
         // ==========================================
@@ -375,7 +385,9 @@ public:
 
         // TỰ ĐỘNG LOAD DỮ LIỆU KHI MỞ APP
         manager.ImportCSV("data.csv");
-
+        char importFilenameInput[64] = ""; // Ô nhập tên file
+        bool editImportFilename = false;   // Trạng thái click
+        string fileNotifMsg = "";          // Dòng chữ thông báo thành công/thất bại
         // ==========================================
         // VÒNG LẶP CHÍNH CỦA GIAO DIỆN
         // ==========================================
@@ -779,13 +791,57 @@ public:
             // ----------------------------------------------------
             else if (activeTab == 2)
             {
-                DrawText("Luu tru Du lieu he thong", 310, 60, 24, textDark);
-                if (GuiButton((Rectangle){310, 120, 250, 45}, "GHI DE VAO FILE DATA.CSV"))
+                DrawText("Trung Tam Quan Ly Du Lieu", 310, 60, 24, textDark);
+                // --- TÍNH NĂNG 1: XUẤT DỮ LIỆU ---
+                DrawText("1. XUAT DU LIEU (BACKUP)", 310, 110, 18, BLUE);
+                DrawText("Luu toan bo danh sach hien tai vao he thong (Mac dinh: data.csv)", 310, 140, 16, GRAY);
+                if (GuiButton((Rectangle){310, 170, 250, 45}, "GHI DE VAO FILE DATA.CSV"))
                 {
                     manager.ExportCSV("data.csv");
+                    fileNotifMsg = ">> Da xuat du lieu ra file data.csv thanh cong!";
                 }
+                // --- TÍNH NĂNG 2: NHẬP DỮ LIỆU TỪ FILE KHÁC ---
+                DrawLine(310, 250, currentWidth - 60, 250, LIGHTGRAY);
+                DrawText("2. NHAP DU LIEU (IMPORT)", 310, 280, 18, BLUE);
+                DrawText("Nhap ten file CSV can doc (VD: khupho2.csv). Chon che do Nhap thich hop:", 310, 310, 16, GRAY);
+                // Ô nhập tên file
+                if (GuiTextBox((Rectangle){310, 340, 300, 40}, importFilenameInput, 64, editImportFilename))
+                {
+                    editImportFilename = !editImportFilename;
+                }
+                // NÚT 1: ĐỌC VÀ GHÉP THÊM (overwrite = false)
+                if (GuiButton((Rectangle){630, 340, 180, 40}, "DOC GHEP THEM"))
+                {
+                    string fileToLoad = importFilenameInput;
+                    if (fileToLoad != "")
+                    {
+                        manager.ImportCSV(fileToLoad, false); // Tham số false = KHÔNG ghi đè
+                        fileNotifMsg = ">> Da nap GHEP THEM du lieu tu [" + fileToLoad + "] vao he thong!";
+                        importFilenameInput[0] = '\0';
+                    }
+                    else
+                    {
+                        fileNotifMsg = ">> Loi: Vui long nhap ten file!";
+                    }
+                }
+                // NÚT 2: ĐỌC VÀ GHI ĐÈ (overwrite = true)
+                if (GuiButton((Rectangle){830, 340, 180, 40}, "DOC GHI DE"))
+                {
+                    string fileToLoad = importFilenameInput;
+                    if (fileToLoad != "")
+                    {
+                        manager.ImportCSV(fileToLoad, true); // Tham số true = GHI ĐÈ (Xóa hết cũ)
+                        fileNotifMsg = ">> Da xoa du lieu cu. Nap MỚI HOÀN TOÀN tu [" + fileToLoad + "]!";
+                        importFilenameInput[0] = '\0';
+                    }
+                    else
+                    {
+                        fileNotifMsg = ">> Loi: Vui long nhap ten file!";
+                    }
+                }
+                // --- HIỂN THỊ THÔNG BÁO CHUNG ---
+                DrawText(fileNotifMsg.c_str(), 310, 420, 18, RED);
             }
-
             EndDrawing();
         }
         CloseWindow();
