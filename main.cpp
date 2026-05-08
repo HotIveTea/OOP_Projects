@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <cctype>
 #include "raylib.h"
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -175,6 +176,31 @@ public:
         }
         return false; // Không tìm thấy
     }
+    vector<People *> SearchMembers(string query)
+    {
+        vector<People *> result;
+        string q = query;
+        for (char &c : q)
+            c = tolower(c);
+
+        for (auto h : householdList)
+        {
+            for (auto p : h->members)
+            {
+                string name = p->getName();
+
+                for (char &c : name)
+                    c = tolower(c);
+
+                string idStr = to_string(p->getID());
+                if (name.find(q) != string::npos || idStr.find(q) != string::npos)
+                {
+                    result.push_back(p);
+                }
+            }
+        }
+        return result;
+    }
     vector<People *> GetAllPeople()
     {
         vector<People *> all;
@@ -268,19 +294,16 @@ public:
         {
             ClearData();
         }
-
         string line, word;
-        getline(f, line); // Bỏ qua dòng tiêu đề
+        getline(f, line);
         while (getline(f, line))
         {
             stringstream s(line);
             vector<string> row;
             while (getline(s, word, ','))
                 row.push_back(word);
-
             if (row.size() < 13)
                 continue;
-
             string hhID = row[0], addr = row[1], type = row[2];
             int id = stoi(row[3]);
             string name = row[4], gender = row[5];
@@ -288,7 +311,6 @@ public:
             bool isHead = stoi(row[9]);
             string extra1 = row[10], extra2 = row[11];
             float money = stof(row[12]);
-
             People *newP = nullptr;
             if (type == "HSSV")
                 newP = new Student(name, gender, dob, id, isHead, extra1);
@@ -296,7 +318,6 @@ public:
                 newP = new Worker(name, gender, dob, id, isHead, extra1, extra2, money);
             else if (type == "Nghi Huu")
                 newP = new Retriee(name, gender, dob, id, isHead, money);
-
             if (newP)
             {
                 Household *h = FindHousehold(hhID);
@@ -382,8 +403,9 @@ public:
         People *personToEdit = nullptr;
 
         HouseholdManager manager;
-
-        // TỰ ĐỘNG LOAD DỮ LIỆU KHI MỞ APP
+        int statType = 0;     // 0: Tuổi, 1: Tiền đóng góp
+        int statCriteria = 1; // 0: Thấp nhất, 1: Cao nhất
+        People *statResultPerson = nullptr;
         manager.ImportCSV("data.csv");
         char importFilenameInput[64] = ""; // Ô nhập tên file
         bool editImportFilename = false;   // Trạng thái click
@@ -429,7 +451,7 @@ public:
             // ----------------------------------------------------
             if (activeTab == 0)
             {
-                // TOẠ ĐỘ ĐỘNG
+                // TOẠ ĐỘ ĐỘNG CHO CÁC CỘT
                 float startX = 310;
                 float usableWidth = (float)currentWidth - startX - 40;
                 float colID = startX;
@@ -458,9 +480,44 @@ public:
 
                 Rectangle panelBounds = {295, 155, (float)currentWidth - 305, (float)currentHeight - 210};
 
-                // --- VẼ DANH SÁCH BÊN DƯỚI TRƯỚC ---
-                if (sortActive == 0)
+                // KIỂM TRA XEM NGƯỜI DÙNG CÓ ĐANG GÕ TÌM KIẾM KHÔNG?
+                bool isSearching = (strlen(searchInput) > 0);
+
+                // --- VẼ DANH SÁCH TÙY THEO CHẾ ĐỘ ---
+                if (isSearching)
                 {
+                    // 1. CHẾ ĐỘ LIVE SEARCH: Chỉ in ra những người khớp từ khóa
+                    vector<People *> flatList = manager.SearchMembers(searchInput);
+
+                    float totalContentHeight = flatList.size() * 45 + 20;
+                    Rectangle contentBounds = {0, 0, (float)currentWidth - 325, (totalContentHeight > panelBounds.height) ? totalContentHeight : panelBounds.height};
+
+                    GuiScrollPanel(panelBounds, NULL, contentBounds, &scrollList, &viewList);
+                    BeginScissorMode(viewList.x, viewList.y, viewList.width, viewList.height);
+                    float rowY = panelBounds.y + scrollList.y;
+
+                    for (People *p : flatList)
+                    {
+                        DrawRectangleRounded({300, rowY, (float)currentWidth - 340, 35}, 0.1f, 10, {255, 250, 205, 255}); // Màu nền hơi vàng chanh nổi bật
+                        DrawText(TextFormat("%d", p->getID()), colID, rowY + 10, 18, RED);                                // In đỏ ID cho dễ nhìn để bấm Sửa
+                        DrawText(p->getName().c_str(), colName, rowY + 10, 18, textDark);
+                        DrawText(p->getGender().c_str(), colGender, rowY + 10, 18, textDark);
+                        DrawText(TextFormat("%d", p->getAge()), colAge, rowY + 10, 18, textDark);
+                        Date dob = p->getDateOfBirth();
+                        DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), colDob, rowY + 10, 18, textDark);
+                        DrawText(p->GetType().c_str(), colType, rowY + 10, 18, DARKGRAY);
+                        DrawText(p->GetSchool().c_str(), colSchool, rowY + 10, 18, textDark);
+                        DrawText(p->GetJob().c_str(), colJob, rowY + 10, 18, textDark);
+                        DrawText(p->GetCompanyName().c_str(), colCompany, rowY + 10, 18, textDark);
+                        DrawText(p->GetSalary().c_str(), colIncome, rowY + 10, 18, textDark);
+                        DrawText(TextFormat("%.0f VND", p->CalculateMoney()), colContrib, rowY + 10, 18, GREEN);
+                        rowY += 40;
+                    }
+                    EndScissorMode();
+                }
+                else if (sortActive == 0)
+                {
+                    // 2. CHẾ ĐỘ HIỂN THỊ HỘ GIA ĐÌNH MẶC ĐỊNH
                     float totalContentHeight = 0;
                     for (Household *h : manager.householdList)
                         totalContentHeight += 50 + (h->members.size() * 45) + 20;
@@ -502,6 +559,7 @@ public:
                 }
                 else
                 {
+                    // 3. CHẾ ĐỘ SẮP XẾP PHẲNG (Flat Sort)
                     vector<People *> flatList = manager.GetAllPeople();
                     int type = (sortActive == 1) ? 0 : 1;
                     manager.SortMembers(flatList, type, sortOrder);
@@ -533,25 +591,26 @@ public:
                     EndScissorMode();
                 }
 
-                // --- VẼ TOP BAR (Search & Sort) NẰM TRÊN CÙNG ĐỂ KHÔNG BỊ DANH SÁCH CHE LẤP ---
+                // --- VẼ TOP BAR (NẰM TRÊN CÙNG ĐỂ KHÔNG BỊ DANH SÁCH CHE) ---
                 DrawRectangle(280, 40, currentWidth - 310, 80, WHITE);
                 DrawLine(310, 120, currentWidth - 60, 120, LIGHTGRAY);
 
-                DrawText("Thao tac (Nhap ID):", 310, 60, 18, textDark);
-                if (GuiTextBox((Rectangle){480, 55, 120, 35}, searchInput, 32, editSearch))
+                // Giao diện đã được thiết kế lại toạ độ để thoáng hơn
+                DrawText("Tim kiem (Ten/ID):", 310, 60, 18, textDark);
+                if (GuiTextBox((Rectangle){480, 55, 180, 35}, searchInput, 32, editSearch))
                     editSearch = !editSearch;
 
-                // NÚT XÓA
-                if (GuiButton((Rectangle){610, 55, 70, 35}, "XOA"))
+                // NÚT XÓA (Cần nhập chính xác ID)
+                if (GuiButton((Rectangle){670, 55, 70, 35}, "XOA"))
                 {
                     if (manager.DeleteMember(atoi(searchInput)))
                         notifMsg = "Da xoa!";
                     else
-                        notifMsg = "Khong tim thay!";
+                        notifMsg = "Nhap dung ID de xoa!";
                 }
 
-                // NÚT SỬA (CHUYỂN SANG TAB 1 VÀ ĐỔ DỮ LIỆU)
-                if (GuiButton((Rectangle){690, 55, 70, 35}, "SUA"))
+                // NÚT SỬA (Cần nhập chính xác ID)
+                if (GuiButton((Rectangle){750, 55, 70, 35}, "SUA"))
                 {
                     int targetID = atoi(searchInput);
                     if (manager.FindPersonAndHousehold(targetID, currentHousehold, personToEdit))
@@ -592,19 +651,18 @@ public:
                     }
                     else
                     {
-                        notifMsg = "Khong tim thay!";
+                        notifMsg = "Nhap dung ID de sua!";
                     }
                 }
-                DrawText(notifMsg.c_str(), 480, 95, 16, RED);
-
-                // NÚT DROPDOWN SẮP XẾP
-                DrawText("Sap xep:", 800, 60, 18, textDark);
+                // Hiển thị thông báo ngay bên dưới nút
+                DrawText(notifMsg.c_str(), 670, 95, 14, RED);
+                // NÚT SẮP XẾP
+                DrawText("Sap xep:", 850, 60, 18, textDark);
                 if (sortActive != 0)
                 {
-                    GuiToggleGroup((Rectangle){900, 55, 80, 35}, "Tang;Giam", &sortOrder);
+                    GuiToggleGroup((Rectangle){930, 55, 80, 35}, "Tang;Giam", &sortOrder);
                 }
-                // DROPDOWN VẼ CUỐI CÙNG TRONG VÙNG NÀY ĐỂ MENU XỔ XUỐNG ĐƯỢC ƯU TIÊN HIỂN THỊ
-                if (GuiDropdownBox((Rectangle){1080, 55, 180, 35}, "Theo Ho;Theo Tuoi;Theo Tien", &sortActive, sortDropdownEdit))
+                if (GuiDropdownBox((Rectangle){1100, 55, 160, 35}, "Theo Ho;Theo Tuoi;Theo Tien", &sortActive, sortDropdownEdit))
                 {
                     sortDropdownEdit = !sortDropdownEdit;
                 }
@@ -791,56 +849,137 @@ public:
             // ----------------------------------------------------
             else if (activeTab == 2)
             {
-                DrawText("Trung Tam Quan Ly Du Lieu", 310, 60, 24, textDark);
-                // --- TÍNH NĂNG 1: XUẤT DỮ LIỆU ---
-                DrawText("1. XUAT DU LIEU (BACKUP)", 310, 110, 18, BLUE);
-                DrawText("Luu toan bo danh sach hien tai vao he thong (Mac dinh: data.csv)", 310, 140, 16, GRAY);
-                if (GuiButton((Rectangle){310, 170, 250, 45}, "GHI DE VAO FILE DATA.CSV"))
+                DrawText("Luu tru & Thong ke He thong", 310, 60, 24, textDark);
+
+                // ==========================================
+                // PHẦN 1: THỐNG KÊ TÌM KIẾM CAO NHẤT / THẤP NHẤT
+                // ==========================================
+                DrawText("1. THONG KE CU DAN (CA THE)", 310, 110, 18, BLUE);
+
+                DrawText("Tieu chi thong ke:", 310, 150, 18, textDark);
+                GuiToggleGroup((Rectangle){480, 145, 150, 35}, "Tuoi;Tien Dong Gop", &statType);
+
+                DrawText("Gia tri tim kiem:", 310, 200, 18, textDark);
+                GuiToggleGroup((Rectangle){480, 195, 150, 35}, "Thap Nhat;Cao Nhat", &statCriteria);
+
+                if (GuiButton((Rectangle){310, 250, 180, 45}, "THONG KE NGAY"))
+                {
+                    // Lấy ra "trùm cuối" và gán vào con trỏ
+                    statResultPerson = manager.FindExtreme(statType, statCriteria);
+                }
+
+                // ==========================================
+                // VẼ BẢNG THỐNG KÊ (GIỐNG TAB 0)
+                // ==========================================
+                float tableY = 320; // Vị trí bắt đầu vẽ bảng
+
+                if (statResultPerson != nullptr)
+                {
+                    // Lấy lại bộ toạ độ động siêu chuẩn
+                    float startX = 310;
+                    float usableWidth = (float)currentWidth - startX - 40;
+                    float colID = startX;
+                    float colName = startX + usableWidth * 0.05f;
+                    float colGender = startX + usableWidth * 0.22f;
+                    float colAge = startX + usableWidth * 0.30f;
+                    float colDob = startX + usableWidth * 0.35f;
+                    float colType = startX + usableWidth * 0.45f;
+                    float colSchool = startX + usableWidth * 0.55f;
+                    float colJob = startX + usableWidth * 0.66f;
+                    float colCompany = startX + usableWidth * 0.75f;
+                    float colIncome = startX + usableWidth * 0.85f;
+                    float colContrib = startX + usableWidth * 0.94f;
+
+                    // Vẽ Header Cột
+
+                    DrawText("ID", colID, tableY, 16, GRAY);
+                    DrawText("HO TEN", colName, tableY, 16, GRAY);
+                    DrawText("GIOI TINH", colGender, tableY, 16, GRAY);
+                    DrawText("TUOI", colAge, tableY, 16, GRAY);
+                    DrawText("NGAY SINH", colDob, tableY, 16, GRAY);
+                    DrawText("PHAN LOAI", colType, tableY, 16, GRAY);
+                    DrawText("TRUONG", colSchool, tableY, 16, GRAY);
+                    DrawText("NGHE", colJob, tableY, 16, GRAY);
+                    DrawText("CONG TY", colCompany, tableY, 16, GRAY);
+                    DrawText("THU NHAP", colIncome, tableY, 16, GRAY);
+                    DrawText("DONG GOP", colContrib, tableY, 16, GRAY);
+
+                    // Vẽ dữ liệu của người được thống kê
+                    float rowY = tableY + 30;
+                    DrawRectangleRounded({295, rowY - 10, (float)currentWidth - 305, 40}, 0.1f, 10, {248, 250, 252, 255}); // Vẽ khung nền
+
+                    People *p = statResultPerson;
+                    DrawText(TextFormat("%d", p->getID()), colID, rowY, 18, textDark);
+                    string displayTitle = p->getName();
+                    if (p->getIsHouseholdHead())
+                        displayTitle += " (CHU HO)";
+                    DrawText(displayTitle.c_str(), colName, rowY, 18, (p->getIsHouseholdHead() ? BLUE : textDark));
+                    DrawText(p->getGender().c_str(), colGender, rowY, 18, textDark);
+                    DrawText(TextFormat("%d", p->getAge()), colAge, rowY, 18, textDark);
+                    Date dob = p->getDateOfBirth();
+                    DrawText(TextFormat("%d/%d/%d", dob.day, dob.month, dob.year), colDob, rowY, 18, textDark);
+                    DrawText(p->GetType().c_str(), colType, rowY, 18, DARKGRAY);
+                    DrawText(p->GetSchool().c_str(), colSchool, rowY, 18, textDark);
+                    DrawText(p->GetJob().c_str(), colJob, rowY, 18, textDark);
+                    DrawText(p->GetCompanyName().c_str(), colCompany, rowY, 18, textDark);
+                    DrawText(p->GetSalary().c_str(), colIncome, rowY, 18, textDark);
+                    DrawText(TextFormat("%.0f VND", p->CalculateMoney()), colContrib, rowY, 18, GREEN);
+                }
+                else
+                {
+                    DrawText(">> Chua co du lieu hoac chua bam Thong ke!", 310, tableY, 18, GRAY);
+                }
+
+                // ==========================================
+                // PHẦN 2: QUẢN LÝ DỮ LIỆU FILE I/O
+                // ==========================================
+                float fileY = 430; // Đẩy toàn bộ khu vực này xuống toạ độ 430 để nhường chỗ cho bảng
+                DrawLine(310, fileY - 30, currentWidth - 60, fileY - 30, LIGHTGRAY);
+
+                DrawText("2. QUAN LY DU LIEU FILE (CSV)", 310, fileY, 18, BLUE);
+
+                // Nút Backup dữ liệu
+                DrawText("Xuat toan bo danh sach hien tai ra file data.csv (Backup):", 310, fileY + 40, 16, GRAY);
+                if (GuiButton((Rectangle){310, fileY + 70, 250, 45}, "GHI DE VAO FILE DATA.CSV"))
                 {
                     manager.ExportCSV("data.csv");
                     fileNotifMsg = ">> Da xuat du lieu ra file data.csv thanh cong!";
                 }
-                // --- TÍNH NĂNG 2: NHẬP DỮ LIỆU TỪ FILE KHÁC ---
-                DrawLine(310, 250, currentWidth - 60, 250, LIGHTGRAY);
-                DrawText("2. NHAP DU LIEU (IMPORT)", 310, 280, 18, BLUE);
-                DrawText("Nhap ten file CSV can doc (VD: khupho2.csv). Chon che do Nhap thich hop:", 310, 310, 16, GRAY);
-                // Ô nhập tên file
-                if (GuiTextBox((Rectangle){310, 340, 300, 40}, importFilenameInput, 64, editImportFilename))
+
+                // Chức năng Đọc file nâng cao
+                DrawText("Nhap ten file CSV can doc de GHEP THEM hoac GHI DE:", 310, fileY + 150, 16, GRAY);
+                if (GuiTextBox((Rectangle){310, fileY + 180, 300, 40}, importFilenameInput, 64, editImportFilename))
                 {
                     editImportFilename = !editImportFilename;
                 }
-                // NÚT 1: ĐỌC VÀ GHÉP THÊM (overwrite = false)
-                if (GuiButton((Rectangle){630, 340, 180, 40}, "DOC GHEP THEM"))
+
+                if (GuiButton((Rectangle){630, fileY + 180, 180, 40}, "DOC GHEP THEM"))
                 {
                     string fileToLoad = importFilenameInput;
                     if (fileToLoad != "")
                     {
-                        manager.ImportCSV(fileToLoad, false); // Tham số false = KHÔNG ghi đè
-                        fileNotifMsg = ">> Da nap GHEP THEM du lieu tu [" + fileToLoad + "] vao he thong!";
+                        manager.ImportCSV(fileToLoad, false);
+                        fileNotifMsg = ">> Da nap GHEP THEM du lieu tu [" + fileToLoad + "]!";
                         importFilenameInput[0] = '\0';
                     }
                     else
-                    {
                         fileNotifMsg = ">> Loi: Vui long nhap ten file!";
-                    }
                 }
-                // NÚT 2: ĐỌC VÀ GHI ĐÈ (overwrite = true)
-                if (GuiButton((Rectangle){830, 340, 180, 40}, "DOC GHI DE"))
+
+                if (GuiButton((Rectangle){830, fileY + 180, 180, 40}, "DOC GHI DE SACH"))
                 {
                     string fileToLoad = importFilenameInput;
                     if (fileToLoad != "")
                     {
-                        manager.ImportCSV(fileToLoad, true); // Tham số true = GHI ĐÈ (Xóa hết cũ)
-                        fileNotifMsg = ">> Da xoa du lieu cu. Nap MỚI HOÀN TOÀN tu [" + fileToLoad + "]!";
+                        manager.ImportCSV(fileToLoad, true);
+                        fileNotifMsg = ">> Da xoa cu, nap MOI HOAN TOAN tu [" + fileToLoad + "]!";
                         importFilenameInput[0] = '\0';
                     }
                     else
-                    {
                         fileNotifMsg = ">> Loi: Vui long nhap ten file!";
-                    }
                 }
-                // --- HIỂN THỊ THÔNG BÁO CHUNG ---
-                DrawText(fileNotifMsg.c_str(), 310, 420, 18, RED);
+                // Thông báo của File I/O
+                DrawText(fileNotifMsg.c_str(), 310, fileY + 250, 18, RED);
             }
             EndDrawing();
         }
